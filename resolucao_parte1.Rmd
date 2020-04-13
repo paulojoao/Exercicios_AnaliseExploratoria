@@ -1,0 +1,103 @@
+---
+title: "Exercicios Parte 1"
+author: João Pereira
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+### Carregando dependencias
+```{r}
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(ggplot2)
+```
+Leia o arquivo RDS "us_change". Trate-se de um tibble de variáveis trimestrais contendo as variações percentual no gastos privados com consumo, renda disponível, produção, população e taxa de desemprego no Estados Unidos entre 1970 e 2016. As taxas de variação foram obtidas a partir de em valores reais medidos em dólares americanos de 2012.
+
+```{r}
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+getwd()
+load(file='us_change.rda')
+```
+
+
+### a) Criar novo tibble padronizando os nomes das variáveis:
+```{r}
+data <- us_change %>% janitor::clean_names()
+```
+
+### a)  Construa um novo tibble no qual todas as variáveis sejam disponibilizadas em número índice, assumindo valor 100 no primeiro trimestre do ano 2000 (ie 2010Q1 = 100).
+
+```{r}
+income_2000q1 <- data$income[121] 
+production_2000q1 <- data$production[121] 
+consumption_2000q1 <- data$consumption[121] 
+savings_2000_q1 <- data$savings[121] 
+unenployment_2000_q1 <- data$unemployment[121] 
+
+
+index_100 <- data %>% mutate(index_income = income * 100 / income_2000q1) %>% 
+                 mutate(index_production = production * 100 / production_2000q1) %>% 
+                 mutate(index_consumption = consumption * 100 / consumption_2000q1) %>%
+                 mutate(index_savings = savings * 100 / savings_2000_q1) %>%
+                 mutate(index_unemployment = unemployment * 100 / unenployment_2000_q1) %>% 
+                 select(quarter, index_income, index_consumption, index_savings,index_unemployment, index_production)
+
+View(index_100)
+
+```
+
+## b) Explore a correlação entre as variáveis. Qual a diferença entre se calcular acorrelação das variáveis em número índice e em taxa de variação?
+
+
+### Correlação sem indice
+``` {r}
+correl_<- cor(data %>% select(-"quarter")) %>% round(2)
+correl
+```
+
+### Correlação com indice
+``` {r}
+correl_indice <- cor(index_100 %>% select(-"quarter")) %>% round(2)
+correl_indice
+```
+
+
+### Resposta item B) Não houve diferença em calcular a correlação nas duas formas.
+
+## C) Construa gráficos que contribuam em seu entendimento sobre a dinâmicade cada variável do dataset, bem como as relações entre elas. Assim, porexemplo, como ponto de partida plote gráficos de dispersão conjunta dasvariáveis, bem como suas evoluções ao longo do tempo. Sinta-se livre paracomplementar tal caracterização com todo e qualquer arsenal analítico quejulgue interessante.
+
+
+``` {r}
+corrplot::corrplot(correl,type = "upper", tl.col="black")
+```
+
+### Grafico de evolução da Produção e Consumo(utilizando as variaveis originais)
+
+```{r}
+
+data  %>% 
+  ggplot( aes(x = quarter) ) +
+  geom_line(aes(y = production), color = "blue") +
+  geom_line(aes(y = consumption), color = "green")
+```
+### Gráfico de evolução da Renda e do Consumo(utilizando as variaveis originais)
+``` {r}
+data %>% 
+  ggplot( aes(x = quarter) ) +
+  geom_line(aes(y = income), color = "blue") +
+  geom_line(aes(y = consumption), color = "black")
+
+```
+### d) A partir das visualizações obtidas no item anterior, que tipo de aprendizadovocê consegue extrair acerca de (i) evolução das variáveis ao longo do tempoe (ii) das correlações nas dinâmicas das diversas variáveis?
+Maior desemprego = menor consumo.
+Menor desemprego = Maior Renda = Maior Consumo.
+Maior renda = Maior Poupança.
+Maior produção = menor desemprego
+
+
+### e) Você consegue identificar, visualmente, alguns movimentos bruscos/atípicos/anômalosna evolução das séries? Tente destacar tais pontos nos gráficos construídos2:
+Dá para notar os efeitos do 11 de setembro e da crise de 2008. além disso da para notar que apartir de meados da década de 80 a um "desprendimento" das linhas de Consumo e Produção. só com esse dataset não da para concluir o que houve, mas imagino que tenha alguma relação com a migração de produção para paises onde o custo é mais baixo.
